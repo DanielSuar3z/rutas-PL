@@ -156,7 +156,7 @@ El sistema calcula y muestra:
 
 ##  Autores
 
-- **Tu Nombre** - [@tu-usuario](https://github.com/tu-usuario)
+- **Jaime Beltrán** - danielsuarez2407@gmail.com
 - **Universidad de la Amazonia** - Florencia, Caquetá
 
 
