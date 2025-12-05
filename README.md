@@ -156,7 +156,7 @@ El sistema calcula y muestra:
 
 ##  Autores
 
-- **Jaime Beltrán** - danielsuarez2407@gmail.com
+- **Jaime Daniel Beltrán Suárez** - danielsuarez2407@gmail.com
 - **Universidad de la Amazonia** - Florencia, Caquetá
 
 
