@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapa de Distribución - Todos los Lugares</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key={GOOGLE_MAPS_API_KEY}&libraries=places,geometry"></script>
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+            border-radius: 10px;
+        }
+        .info-window {
+            max-width: 250px;
+            font-family: Arial, sans-serif;
+        }
+        .info-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #1a73e8;
+        }
+        .info-address {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        .info-rating {
+            color: #ff9800;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="info"></div>
+    
+    <script>
+        var map;
+        var markers = [];
+        var infoWindow;
+        var lugares = {lugares_data};
+        var rutas = {rutas_data};
+        var puntosPersonalizados = {puntos_personalizados_data};
+        
+        // Iconos por categoría
+        var iconosCategoria = {
+            "🏥 Salud": "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+            "🛒 Comercios": "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+            "🍽️ Restaurantes": "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
+            "🏫 Educación": "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
+            "🏦 Servicios": "https://maps.google.com/mapfiles/ms/icons/purple-dot.png",
+            "⛪ Religión": "https://maps.google.com/mapfiles/ms/icons/orange-dot.png",
+            "🎭 Entretenimiento": "https://maps.google.com/mapfiles/ms/icons/pink-dot.png",
+            "🏨 Hospedaje": "https://maps.google.com/mapfiles/ms/icons/ltblue-dot.png",
+            "🚗 Transporte": "https://maps.google.com/mapfiles/ms/icons/white-dot.png"
+        };
+        
+        // Colores para rutas
+        var coloresRutas = ['#FF0000', '#0000FF', '#00FF00', '#FF00FF', '#FFFF00', '#00FFFF', '#FFA500', '#800080', '#008000', '#800000'];
+        
+        function initMap() {
+            // Centro del mapa en Florencia
+            var center = { lat: {centro_lat}, lng: {centro_lng} };
+            
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 14,
+                center: center,
+                mapTypeId: google.maps.MapTypeId.ROADMAP,
+                styles: [
+                    {
+                        "featureType": "administrative",
+                        "elementType": "labels.text.fill",
+                        "stylers": [{ "color": "#444444" }]
+                    },
+                    {
+                        "featureType": "landscape",
+                        "elementType": "all",
+                        "stylers": [{ "color": "#f2f2f2" }]
+                    },
+                    {
+                        "featureType": "poi",
+                        "elementType": "all",
+                        "stylers": [{ "visibility": "on" }]
+                    },
+                    {
+                        "featureType": "road",
+                        "elementType": "all",
+                        "stylers": [{ "saturation": -100 }, { "lightness": 45 }]
+                    },
+                    {
+                        "featureType": "road.highway",
+                        "elementType": "all",
+                        "stylers": [{ "visibility": "simplified" }]
+                    },
+                    {
+                        "featureType": "road.arterial",
+                        "elementType": "labels.icon",
+                        "stylers": [{ "visibility": "off" }]
+                    },
+                    {
+                        "featureType": "transit",
+                        "elementType": "all",
+                        "stylers": [{ "visibility": "off" }]
+                    },
+                    {
+                        "featureType": "water",
+                        "elementType": "all",
+                        "stylers": [{ "color": "#46bcec" }, { "visibility": "on" }]
+                    }
+                ]
+            });
+            
+            infoWindow = new google.maps.InfoWindow();
+            
+            // Dibujar rutas optimizadas
+            rutas.forEach(function(ruta, index) {
+                var color = coloresRutas[index % coloresRutas.length];
+                var rutaCoords = ruta.coords.map(function(coord) {
+                    return { lat: coord[0], lng: coord[1] };
+                });
+                
+                var polyline = new google.maps.Polyline({
+                    path: rutaCoords,
+                    geodesic: true,
+                    strokeColor: color,
+                    strokeOpacity: 0.7,
+                    strokeWeight: 6
+                });
+                
+                polyline.setMap(map);
+                
+                // Agregar información de la ruta
+                var contentString = '<div class="info-window">' +
+                    '<div class="info-title">Ruta Optimizada</div>' +
+                    '<div><strong>De:</strong> ' + ruta.fabrica + '</div>' +
+                    '<div><strong>A:</strong> ' + ruta.almacen + '</div>' +
+                    '<div><strong>Cantidad:</strong> ' + ruta.cantidad + ' unidades</div>' +
+                    '<div><strong>Costo:</strong> $' + ruta.costo.toLocaleString('es-CO') + ' COP</div>' +
+                    '</div>';
+                
+                google.maps.event.addListener(polyline, 'click', function(event) {
+                    infoWindow.setContent(contentString);
+                    infoWindow.setPosition(event.latLng);
+                    infoWindow.open(map);
+                });
+            });
+            
+            // Agregar marcadores de lugares encontrados
+            lugares.forEach(function(lugar) {
+                var marker = new google.maps.Marker({
+                    position: { lat: lugar.lat, lng: lugar.lng },
+                    map: map,
+                    title: lugar.nombre,
+                    icon: {
+                        url: iconosCategoria[lugar.categoria] || 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                        scaledSize: new google.maps.Size(24, 24)
+                    }
+                });
+                
+                var contentString = '<div class="info-window">' +
+                    '<div class="info-title">' + lugar.nombre + '</div>' +
+                    '<div class="info-address">' + lugar.direccion + '</div>' +
+                    '<div class="info-rating">⭐ ' + lugar.rating + '</div>' +
+                    '<div style="font-size: 10px; color: #999; margin-top: 5px;">' + lugar.categoria + '</div>' +
+                    '</div>';
+                
+                marker.addListener('click', function() {
+                    infoWindow.setContent(contentString);
+                    infoWindow.open(map, marker);
+                });
+                
+                markers.push(marker);
+            });
+            
+            // Agregar marcadores personalizados (fábricas y almacenes)
+            puntosPersonalizados.forEach(function(punto) {
+                var marker = new google.maps.Marker({
+                    position: { lat: punto.coords[0], lng: punto.coords[1] },
+                    map: map,
+                    title: punto.nombre,
+                    icon: {
+                        url: punto.tipo === 'fabrica' ? 
+                            'https://maps.google.com/mapfiles/ms/icons/factory.png' :
+                            'https://maps.google.com/mapfiles/ms/icons/warehouse.png',
+                        scaledSize: new google.maps.Size(32, 32)
+                    },
+                    zIndex: 1000
+                });
+                
+                var contentString = '<div class="info-window">' +
+                    '<div class="info-title">' + punto.nombre + '</div>' +
+                    '<div><strong>Tipo:</strong> ' + (punto.tipo === 'fabrica' ? 'Fábrica' : 'Almacén') + '</div>' +
+                    (punto.tipo === 'fabrica' ? 
+                        '<div><strong>Capacidad:</strong> ' + punto.capacidad + '</div>' :
+                        '<div><strong>Demanda:</strong> ' + punto.demanda + '</div>') +
+                    '<div><strong>Costo por unidad:</strong> $' + (punto.costo || 0).toLocaleString('es-CO') + ' COP</div>' +
+                    '<button onclick="eliminarMarcadorPersonalizado(\'' + punto.nombre + '\')" style="margin-top: 5px; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer;">Eliminar</button>' +
+                    '</div>';
+                
+                marker.addListener('click', function() {
+                    infoWindow.setContent(contentString);
+                    infoWindow.open(map, marker);
+                });
+                
+                markers.push(marker);
+            });
+            
+            // Evento para agregar nuevos marcadores personalizados
+            map.addListener('click', function(event) {
+                agregarNuevoMarcador(event.latLng);
+            });
+        }
+
+        function agregarNuevoMarcador(location) {
+            console.log("📍 Click en mapa - Lat:", location.lat(), "Lng:", location.lng());
+    
+    var marker = new google.maps.Marker({
+        position: location,
+        map: map,
+        draggable: true,
+        icon: {
+            url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+            scaledSize: new google.maps.Size(32, 32)
+        }
+    });
+    
+    var nombre = prompt('Ingrese el nombre para este punto:');
+    console.log("📝 Nombre ingresado:", nombre);
+    
+    if (nombre) {
+        var tipo = prompt('Ingrese el tipo (fabrica/almacen):');
+        if (tipo === 'fabrica' || tipo === 'almacen') {
+            var cantidad = prompt(tipo === 'fabrica' ? 'Ingrese la capacidad:' : 'Ingrese la demanda:');
+            var costo = prompt('Ingrese el costo por unidad (COP):');
+            console.log("📦 Cantidad:", cantidad, "💰 Costo:", costo);
+            
+            if (cantidad && costo) {
+                var nuevoPunto = {
+                    nombre: nombre,
+                    coords: [location.lat(), location.lng()],
+                    tipo: tipo,
+                    costo: parseFloat(costo)
+                };
+                
+                if (tipo === 'fabrica') {
+                    nuevoPunto.capacidad = parseInt(cantidad);
+                } else {
+                    nuevoPunto.demanda = parseInt(cantidad);
+                }
+                
+                console.log("📤 Enviando punto a Streamlit:", nuevoPunto);
+                
+                // CORRECCIÓN: Forzar la recreación del evento
+                window.mapEvent = {
+                    type: 'nuevoMarcador',
+                    data: JSON.stringify(nuevoPunto),
+                    timestamp: Date.now()  // Agregar timestamp único
+                };
+                
+                console.log("🔄 Evento creado:", window.mapEvent);
+                
+                // El resto del código permanece igual...
+                marker.setIcon({
+                    url: tipo === 'fabrica' ? 
+                        'https://maps.google.com/mapfiles/ms/icons/factory.png' :
+                        'https://maps.google.com/mapfiles/ms/icons/warehouse.png',
+                    scaledSize: new google.maps.Size(32, 32)
+                });
+                
+                var contentString = '<div class="info-window">' +
+                    '<h3>' + nombre + '</h3>' +
+                    '<p><strong>Tipo:</strong> ' + (tipo === 'fabrica' ? 'Fábrica' : 'Almacén') + '</p>' +
+                    (tipo === 'fabrica' ? 
+                        '<p><strong>Capacidad:</strong> ' + cantidad + '</p>' :
+                        '<p><strong>Demanda:</strong> ' + cantidad + '</p>') +
+                    '<p><strong>Costo por unidad:</strong> $' + parseFloat(costo).toLocaleString('es-CO') + ' COP</p>' +
+                    '<button onclick="eliminarMarcadorPersonalizado(\'' + nombre + '\')">Eliminar</button>' +
+                    '</div>';
+                
+                marker.addListener('click', function() {
+                    infoWindow.setContent(contentString);
+                    infoWindow.open(map, marker);
+                });
+            }
+        } else {
+            marker.setMap(null);
+            alert('Tipo debe ser "fabrica" o "almacen"');
+        }
+    } else {
+        marker.setMap(null);
+    }
+}
+        
+        function eliminarMarcadorPersonalizado(nombre) {
+    if (confirm('¿Está seguro de eliminar ' + nombre + '?')) {
+        // CORRECCIÓN: Serializar el nombre a JSON string
+        window.mapEvent = {
+            type: 'eliminarMarcador',
+            data: JSON.stringify({nombre: nombre})  // ← DATO SERIALIZADO
+        };
+        
+        infoWindow.close();
+    }
+}
+        
+        // Inicializar mapa cuando se carga la página
+        google.maps.event.addDomListener(window, 'load', initMap);
+    </script>
+</body>
+</html>
